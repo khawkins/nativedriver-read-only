@@ -41,7 +41,7 @@ import javax.annotation.Nullable;
  */
 public class RootSearchScope implements ElementSearchScope {
   private static final String REFLECTION_ERROR_MESSAGE
-      = "Android Native Web Driver only supports Android 2.2 (Froyo)."
+      = "Android NativeDriver only supports Android 2.2 (Froyo)."
           + " Check your environment.";
 
   private final ElementContext context;
