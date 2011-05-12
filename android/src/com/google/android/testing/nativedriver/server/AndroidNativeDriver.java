@@ -37,6 +37,7 @@ import org.openqa.selenium.Cookie;
 import org.openqa.selenium.Rotatable;
 import org.openqa.selenium.ScreenOrientation;
 import org.openqa.selenium.SearchContext;
+import org.openqa.selenium.Speed;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebDriverException;
 import org.openqa.selenium.WebElement;
@@ -69,11 +70,6 @@ public class AndroidNativeDriver
    */
   protected class AndroidNativeOptions implements Options {
     @Override
-    public ImeHandler ime() {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
     public void addCookie(Cookie cookie) {
       throw new UnsupportedOperationException();
     }
@@ -100,6 +96,16 @@ public class AndroidNativeDriver
 
     @Override
     public Cookie getCookieNamed(String name) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Speed getSpeed() {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void setSpeed(Speed speed) {
       throw new UnsupportedOperationException();
     }
 
