@@ -20,7 +20,6 @@ package com.google.android.testing.nativedriver.client;
 import com.google.android.testing.nativedriver.common.AndroidCapabilities;
 import com.google.android.testing.nativedriver.common.FindsByText;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 
 import org.openqa.selenium.By;
@@ -29,14 +28,14 @@ import org.openqa.selenium.ScreenOrientation;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.remote.CommandExecutor;
 import org.openqa.selenium.remote.DriverCommand;
-import org.openqa.selenium.remote.HttpCommandExecutor;
 import org.openqa.selenium.remote.RemoteWebDriver;
 import org.openqa.selenium.remote.RemoteWebElement;
 import org.openqa.selenium.remote.internal.JsonToWebElementConverter;
 
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.List;
+
+import javax.annotation.Nullable;
 
 /**
  * Represents an Android NativeDriver (AND) client used to drive native
@@ -48,14 +47,8 @@ import java.util.List;
  */
 public class AndroidNativeDriver
     extends RemoteWebDriver implements FindsByText, Rotatable {
-  private static final int DEFAULT_PORT = 54129;
-
-  /**
-   * The URL used to connect to the server when using a constructor that does
-   * not take a {@code remoteAddress} or {@code executor} argument.
-   */
-  private static final String DEFAULT_ANDROID_DRIVER_URL
-      = "http://localhost:" + DEFAULT_PORT + "/hub";
+  @Nullable
+  private final AdbConnection adbConnection;
 
   /**
    * A {@code Navigation} class for native Android applications. Provides
@@ -106,6 +99,24 @@ public class AndroidNativeDriver
   }
 
   protected AndroidNativeDriver(CommandExecutor executor) {
+    this(executor, null);
+  }
+
+  /**
+   * Creates an instance which routes all commands to a {@code CommandExecutor}.
+   * A mock can be passed as an argument to help with testing. This constructor
+   * also takes an {@code AdbConnection}, to which all ADB commands will be
+   * sent.
+   *
+   * @param executor a command executor through which all commands are
+   *        routed. Using a mock eliminates the need to connect to an HTTP
+   *        server, where the commands are usually routed.
+   * @param adbConnection receives all ADB commands, such as event injections.
+   *        If {@code null}, this instance will not support ADB functionality.
+   * @see AndroidNativeDriverBuilder
+   */
+  protected AndroidNativeDriver(
+      CommandExecutor executor, @Nullable AdbConnection adbConnection) {
     super(Preconditions.checkNotNull(executor), AndroidCapabilities.get());
     setElementConverter(new JsonToWebElementConverter(this) {
         @Override
@@ -113,40 +124,35 @@ public class AndroidNativeDriver
           return new AndroidNativeElement(AndroidNativeDriver.this);
         }
     });
-  }
-
-  private AndroidNativeDriver(URL remoteAddress) {
-    this(new HttpCommandExecutor(Preconditions.checkNotNull(remoteAddress)));
+    this.adbConnection = adbConnection;
   }
 
   /**
-   * Returns a new {@code AndroidNativeDriver} that is connected to an AND
-   * server at the default URL.
+   * @deprecated use {@link AndroidNativeDriverBuilder}
    */
+  @Deprecated
   public static AndroidNativeDriver withDefaultServer() {
-    try {
-      return new AndroidNativeDriver(new URL(DEFAULT_ANDROID_DRIVER_URL));
-    } catch (MalformedURLException exception) {
-      throw Throwables.propagate(exception);
-    }
+    return new AndroidNativeDriverBuilder()
+        .withDefaultServer()
+        .build();
   }
 
   /**
-   * Returns an instance which routes all commands to a
-   * {@code CommandExecutor}. A mock can be
-   * passed as an argument to help with testing.
-   *
-   * @param executor a command executor through which all commands are
-   *        routed. This eliminates the need to connect to an HTTP
-   *        server, where the commands are usually routed.
+   * @deprecated use {@link AndroidNativeDriverBuilder}
    */
+  @Deprecated
   public static AndroidNativeDriver withExecutor(CommandExecutor executor) {
-    return new AndroidNativeDriver(executor);
+    return new AndroidNativeDriver(executor, null);
   }
 
-  /** Returns an instance that connects to the specified URL. */
+  /**
+   * @deprecated use {@link AndroidNativeDriverBuilder}
+   */
+  @Deprecated
   public static AndroidNativeDriver withServer(URL remoteAddress) {
-    return new AndroidNativeDriver(remoteAddress);
+    return new AndroidNativeDriverBuilder()
+        .withServer(remoteAddress)
+        .build();
   }
 
   /**
