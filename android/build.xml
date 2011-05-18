@@ -39,6 +39,7 @@ limitations under the License.
 	   includes="${client.package}/**">
       <classpath>
 	<pathelement path="${third_party.selenium.server}" />
+        <pathelement path="${third_party.jsr305}" />
       </classpath>
     </javac>
   </target>
@@ -111,6 +112,8 @@ limitations under the License.
   		  excludesfile="${client.resourcestoexclude}" />
       <zipfileset src="${third_party.selenium.server}"
 		  excludesfile="${client.resourcestoexclude}" />
+      <zipfileset src="${third_party.jsr305}"
+		  excludesfile="${server.resourcestoexclude}" />
     </zip>
   </target>
 
