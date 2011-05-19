@@ -22,7 +22,7 @@ import com.google.android.testing.nativedriver.client.AndroidNativeDriverBuilder
 import com.google.android.testing.nativedriver.client.AndroidNativeElement;
 import com.google.android.testing.nativedriver.common.AndroidKeys;
 import com.google.android.testing.nativedriver.common.AndroidNativeBy;
-import com.google.testing.util.MoreAsserts;
+import com.google.common.collect.ImmutableList;
 
 import junit.framework.TestCase;
 
@@ -93,8 +93,8 @@ public class FindByTextTest extends TestCase {
     driver.findElement(By.id("planet_spinner")).click();
     driver.findElement(AndroidNativeBy.text("Choose a planet"));
 
-    MoreAsserts.assertEmpty(
-        "Element with text 'Neptune' should be invisible at first.",
+    assertEquals("Element with text 'Neptune' should be invisible at first.",
+        ImmutableList.of(),
         driver.findElements(AndroidNativeBy.text("Neptune")));
 
     String toSend = "";
