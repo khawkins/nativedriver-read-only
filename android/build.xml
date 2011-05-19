@@ -92,6 +92,8 @@ limitations under the License.
 		  excludesfile="${server.resourcestoexclude}" />
       <zipfileset src="${third_party.jetty.core}"
 		  excludesfile="${server.resourcestoexclude}" />
+      <zipfileset src="${third_party.jetty.util}"
+		  excludesfile="${server.resourcestoexclude}" />
     </zip>
   </target>
 
