@@ -102,7 +102,7 @@ limitations under the License.
       <arg value="process" />
       <arg path="${server.jarjarrules}" />
       <arg path="${build.dir}/server-prejarjar.jar" />
-      <arg path="${build.dir}/server-standalone.jar" />
+      <arg path="${server.standalonejar}" />
     </java>
   </target>
 
@@ -124,9 +124,16 @@ limitations under the License.
       <arg value="process" />
       <arg path="${client.jarjarrules}" />
       <arg path="${build.dir}/client-prejarjar.jar" />
-      <arg path="${build.dir}/client-standalone.jar" />
+      <arg path="${client.standalonejar}" />
     </java>
   </target>
 
-  <target name="compile" depends="standalone-server,standalone-client" />
+  <target name="eclipse-references"
+	  depends="standalone-server,standalone-client">
+    <copy file="${client.standalonejar}" todir="test/" />
+    <copy file="${server.standalonejar}" todir="sample-aut/simplelayouts/" />
+  </target>
+
+  <target name="compile"
+	  depends="standalone-server,standalone-client,eclipse-references" />
 </project>
