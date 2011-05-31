@@ -299,6 +299,6 @@ public class ServerInstrumentation extends Instrumentation {
 
     HttpGenerator.setServerVersion("Android NativeDriver jetty");
 
-    Log.i(LOG_TAG, "Jetty started");
+    Log.i(LOG_TAG, "Jetty started on port " + getPort());
   }
 }
