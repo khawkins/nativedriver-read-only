@@ -19,23 +19,35 @@ package com.google.android.testing.nativedriver.client;
 
 import com.google.android.testing.nativedriver.common.AndroidCapabilities;
 import com.google.android.testing.nativedriver.common.FindsByText;
+
 import com.google.common.base.Preconditions;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.io.Closeables;
 
 import org.openqa.selenium.By;
+import org.openqa.selenium.OutputType;
 import org.openqa.selenium.Rotatable;
 import org.openqa.selenium.ScreenOrientation;
+import org.openqa.selenium.TakesScreenshot;
 import org.openqa.selenium.WebElement;
+import org.openqa.selenium.internal.Base64Encoder;
 import org.openqa.selenium.remote.CommandExecutor;
 import org.openqa.selenium.remote.DriverCommand;
 import org.openqa.selenium.remote.RemoteWebDriver;
 import org.openqa.selenium.remote.RemoteWebElement;
 import org.openqa.selenium.remote.internal.JsonToWebElementConverter;
 
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.URL;
 import java.util.List;
 
 import javax.annotation.Nullable;
+import javax.imageio.ImageIO;
 
 /**
  * Represents an Android NativeDriver (AND) client used to drive native
@@ -46,7 +58,7 @@ import javax.annotation.Nullable;
  * @author Tomohiro Kaizu
  */
 public class AndroidNativeDriver
-    extends RemoteWebDriver implements FindsByText, Rotatable {
+    extends RemoteWebDriver implements FindsByText, Rotatable, TakesScreenshot {
   @Nullable
   private final AdbConnection adbConnection;
 
@@ -214,5 +226,71 @@ public class AndroidNativeDriver
   @Override
   public AndroidNativeNavigation navigate() {
     return new AndroidNativeNavigation(super.navigate());
+  }
+
+  private AdbConnection validateAdbConnection() {
+    if (adbConnection == null) {
+      throw new AdbException("Attempted to use ADB-dependant functionality "
+          + "without an AdbConnection object.");
+    }
+
+    return adbConnection;
+  }
+
+  /**
+   * @return {@code false} if PNG-writing is not supported, {@code true}
+   *         otherwise
+   */
+  protected boolean writeImageAsPng(
+      BufferedImage image, OutputStream destination) throws IOException {
+    return ImageIO.write(image, "png", destination);
+  }
+
+  protected String imageToBase64Png(BufferedImage image) {
+    ByteArrayOutputStream rawPngStream = new ByteArrayOutputStream();
+
+    try {
+      if (!writeImageAsPng(image, rawPngStream)) {
+        throw new RuntimeException(
+            "This Java environment does not support converting to PNG.");
+      }
+    } catch (IOException exception) {
+      // This should never happen because rawPngStream is an in-memory stream.
+      Throwables.propagate(exception);
+    }
+    byte[] rawPngBytes = rawPngStream.toByteArray();
+    return new Base64Encoder().encode(rawPngBytes);
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Unlike most {@link RemoteWebDriver} operations, this implementation
+   * does not send a request to the remote server. The screenshot is taken by
+   * using ADB on the driver client side to query the device.
+   *
+   * @throws AdbException if an error occurred while driving the device through
+   *         the {@code adb} tool
+   */
+  @Override
+  public <X> X getScreenshotAs(OutputType<X> target) throws AdbException {
+    AdbConnection adb = validateAdbConnection();
+    FrameBufferFormat format = FrameBufferFormat.ofDevice(adb);
+
+    BufferedImage screenImage = new BufferedImage(
+        format.getXResolution(), format.getYResolution(),
+        BufferedImage.TYPE_INT_ARGB);
+
+    Process pullFrameBuffer = adb.pullFile(FrameBufferFormat.FB_DEVICEFILE);
+    InputStream frameBufferStream = pullFrameBuffer.getInputStream();
+    format.copyFrameBufferToImage(frameBufferStream, screenImage);
+
+    AdbConnection.exhaustProcessOutput(frameBufferStream);
+    Closeables.closeQuietly(frameBufferStream);
+    AdbConnection.confirmExitValueIs(0, pullFrameBuffer);
+
+    String base64Png = imageToBase64Png(screenImage);
+
+    return target.convertFromBase64Png(base64Png);
   }
 }

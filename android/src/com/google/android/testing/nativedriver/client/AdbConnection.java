@@ -17,12 +17,13 @@ limitations under the License.
 
 package com.google.android.testing.nativedriver.client;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.io.ByteStreams;
+import com.google.common.io.Closeables;
 
 import java.io.IOException;
+import java.io.InputStream;
 
 import java.util.List;
 import java.util.Map;
@@ -44,8 +45,7 @@ import javax.annotation.Nullable;
  * @author Gagan Gupta
  */
 public class AdbConnection {
-  @VisibleForTesting
-  static final String IOCTL_RETURNBUFFERHEADER = "return buf: ";
+  public static final String IOCTL_RETURNBUFFERHEADER = "return buf: ";
 
   private final String adbPath;
   @Nullable private final Integer adbServerPort;
@@ -56,6 +56,21 @@ public class AdbConnection {
     return adbPath;
   }
 
+  @Nullable
+  public Integer getAdbServerPort() {
+    return adbServerPort;
+  }
+
+  @Nullable
+  public Integer getEmulatorConsolePort() {
+    return emulatorConsolePort;
+  }
+
+  @Nullable
+  public Integer getEmulatorAdbPort() {
+    return emulatorAdbPort;
+  }
+
   /**
    * Performs the {@code ioctl} command on device corresponding to the given
    * filename. This is equivalent to
@@ -63,9 +78,9 @@ public class AdbConnection {
    *
    * @param filename the name of the device file to perform the request on
    * @param requestCode the request code to perform
-   * @param buffer where to store the output of the command. This array should
-   *        be initialized to the size of the expected data to return.
-   * @return the {@code buffer} parameter
+   * @param length the amount of bytes to expect from the request
+   * @return a byte array the size of {@code length} that contains the results
+   *         of the request
    */
   public byte[] doIoctlForReading(
       String filename, int requestCode, int length) {
@@ -74,7 +89,7 @@ public class AdbConnection {
         "ioctl", "-rl", "" + buffer.length, filename, "" + requestCode);
 
     String rawOutput = outputAsString(adbProcess);
-
+    Closeables.closeQuietly(adbProcess.getInputStream());
     confirmExitValueIs(0, adbProcess);
 
     int returnedDataIndex = rawOutput.indexOf(IOCTL_RETURNBUFFERHEADER);
@@ -85,9 +100,10 @@ public class AdbConnection {
 
     rawOutput = rawOutput
         .substring(returnedDataIndex + IOCTL_RETURNBUFFERHEADER.length());
-    // Now rawOutput is a string in the form of "xx xx xx ...", where "xx" is a
-    // hexadecimal byte.
 
+    // Now rawOutput is a string in the form of "xx xx xx ...", where "xx" is a
+    // hexadecimal byte. So we increment stringIndex at each iteration by 3
+    // because of this format: 2 hex digits, one space, repeated.
     for (int byteIndex = 0, stringIndex = 0; byteIndex < buffer.length;
         byteIndex++, stringIndex += 3) {
       int nextByte = Integer.parseInt(
@@ -101,14 +117,14 @@ public class AdbConnection {
 
   /**
    * Gets the contents of a file or device on the Android device. This is
-   * equivalent to running {@code adb shell cat (FILENAME)} on the command
-   * line.
+   * equivalent to running {@code adb pull (FILENAME) /dev/stdout} on the
+   * command line.
    *
    * @param filename the path to the file to read from
    * @return a {@code Process} object representing the {@code cat} process
    */
-  public Process catFile(String filename) {
-    return runAdb("shell", "cat", filename);
+  public Process pullFile(String filename) {
+    return runAdb("pull", filename, "/dev/stdout");
   }
 
   /**
@@ -144,15 +160,33 @@ public class AdbConnection {
     }
   }
 
-  @VisibleForTesting
   protected ProcessBuilder newProcessBuilder(List<String> commandLine) {
     return new ProcessBuilder(commandLine);
   }
 
-  @VisibleForTesting
   protected Process callProcessBuilderStart(ProcessBuilder processBuilder)
       throws IOException {
     return processBuilder.start();
+  }
+
+  /**
+   * Reads from the given stream until end-of-file is reached. All data read is
+   * ignored. This is useful for closing a process gracefully when there are
+   * unread data in standard out that you want to ignore.
+   *
+   * @throws AdbException if an {@link IOException} occurred while reading from
+   *         the stream. If {@code inputStream} does not represent the output of
+   *         some ADB process, then this exception will be misleading.
+   */
+  public static void exhaustProcessOutput(InputStream inputStream) {
+    try {
+      while (inputStream.read() != -1) {
+        inputStream.skip(Long.MAX_VALUE);
+      }
+    } catch (IOException exception) {
+      throw new AdbException(
+          "IOException when reading output from the adb process.", exception);
+    }
   }
 
   /**
