@@ -25,25 +25,25 @@ import org.openqa.selenium.remote.server.handler.WebDriverHandler;
 import org.openqa.selenium.remote.server.rest.ResultType;
 
 /**
- * Handler of {@code /session/:sessionId/buttonup} for interaction of
+ * Handler of {@code /session/:sessionId/doubleclick} for interaction of
  * touch screen
  *
  * @author Dezheng Xu
  */
-public class TouchUp extends WebDriverHandler {
-  public TouchUp(DriverSessions sessions) {
+public class DoubleTap extends WebDriverHandler {
+  public DoubleTap(DriverSessions sessions) {
     super(sessions);
   }
 
   @Override
   public ResultType call() throws Exception {
     Touch touch = ((HasTouchScreen) getDriver()).getTouch();
-    touch.touchUp(null);
+    touch.doubleTap(null);
     return ResultType.SUCCESS;
   }
 
   @Override
   public String toString() {
-    return String.format("touchup on last active coordinates");
+    return String.format("[doubletap on last active coordinates]");
   }
 }

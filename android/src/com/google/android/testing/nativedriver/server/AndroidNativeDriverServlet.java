@@ -22,7 +22,8 @@ import com.google.android.testing.nativedriver.server.handler.AndroidNativeFindC
 import com.google.android.testing.nativedriver.server.handler.AndroidNativeFindChildElements;
 import com.google.android.testing.nativedriver.server.handler.AndroidNativeFindElement;
 import com.google.android.testing.nativedriver.server.handler.AndroidNativeFindElements;
-import com.google.android.testing.nativedriver.server.handler.Tap;
+import com.google.android.testing.nativedriver.server.handler.Click;
+import com.google.android.testing.nativedriver.server.handler.DoubleTap;
 import com.google.android.testing.nativedriver.server.handler.TouchDown;
 import com.google.android.testing.nativedriver.server.handler.TouchMove;
 import com.google.android.testing.nativedriver.server.handler.TouchUp;
@@ -74,7 +75,9 @@ public class AndroidNativeDriverServlet extends DriverServlet {
           AndroidNativeFindChildElements.class)
           .on(ResultType.SUCCESS, newJsonResult());
 
-      addNewPostMapping(SESSION_PATH + "click", Tap.class)
+      addNewPostMapping(SESSION_PATH + "click", Click.class)
+          .on(ResultType.SUCCESS, newEmptyResult());
+      addNewPostMapping(SESSION_PATH + "doubleclick", DoubleTap.class)
           .on(ResultType.SUCCESS, newEmptyResult());
       addNewPostMapping(SESSION_PATH + "buttondown", TouchDown.class)
           .on(ResultType.SUCCESS, newEmptyResult());

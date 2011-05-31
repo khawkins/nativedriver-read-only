@@ -41,4 +41,9 @@ public class TouchDown extends WebDriverHandler {
     touch.touchDown(null);
     return ResultType.SUCCESS;
   }
+
+  @Override
+  public String toString() {
+    return String.format("[touchdown on last active coordinates]");
+  }
 }

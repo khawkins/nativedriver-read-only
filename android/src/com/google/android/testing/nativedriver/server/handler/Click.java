@@ -32,23 +32,36 @@ import java.util.Map;
  *
  * @author Dezheng Xu
  */
-public class Tap extends WebDriverHandler implements JsonParametersAware {
-  public Tap(DriverSessions sessions) {
+public class Click extends WebDriverHandler implements JsonParametersAware {
+  volatile boolean isLongClick;
+
+  public Click(DriverSessions sessions) {
     super(sessions);
   }
 
   @Override
   public ResultType call() throws Exception {
     Touch touch = ((HasTouchScreen) getDriver()).getTouch();
-    touch.tap(null);
+    if (isLongClick) {
+      touch.longClick(null);
+    } else {
+      touch.tap(null);
+    }
     return ResultType.SUCCESS;
+  }
+
+  @Override
+  public String toString() {
+    return String.format("[tap or longclick on last active coordinates]");
   }
 
   @Override
   public void setJsonParameters(Map<String, Object> allParameters)
       throws Exception {
-    // Do nothing here.
-    // For the mouse case: inLEFT = 0, MIDDLE = 1 , RIGHT = 2).
-    // But we do not care which "button" for interaction of touch screen.
+    if (allParameters.containsKey("button")) {
+      int button = ((Long) allParameters.get("button")).intValue();
+      isLongClick = (button == 2);
+      // For the mouse case, 0 = leftclick, 2 = rightclick/contextclick
+    }
   }
 }

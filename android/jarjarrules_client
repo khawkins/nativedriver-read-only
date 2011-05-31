@@ -5,6 +5,7 @@ zap net.sourceforge.htmlunit.**
 zap org.bouncycastle.**
 zap org.cyberneko.**
 zap org.hamcrest.**
+zap org.json.**
 zap org.openqa.selenium.server.SeleniumServer
 zap org.w3c.**
 zap org.xml.sax.**

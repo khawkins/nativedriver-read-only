@@ -22,8 +22,10 @@ import com.google.common.base.Preconditions;
 
 import android.app.Instrumentation;
 import android.view.MotionEvent;
+import android.view.ViewConfiguration;
 
 import org.openqa.selenium.Point;
+import org.openqa.selenium.WebDriverException;
 import org.openqa.selenium.interactions.internal.Coordinates;
 import org.openqa.selenium.support.ui.Clock;
 
@@ -35,22 +37,36 @@ import javax.annotation.Nullable;
  * @author Dezheng Xu
  */
 public class AndroidNativeTouch implements Touch {
-  private static final long UNDEFINED_TIME = Long.MIN_VALUE;
-  private Coordinates currentActiveCoordinates;
-  private final Clock clock;
-  private final MotionEventUtils motionEventUtils;
-  private long downTime = UNDEFINED_TIME;
+  // Use as the last argument for creating MotionEvent instance
+  protected static final int DEFAULT_META_STATE = 0;
 
-  public AndroidNativeTouch(Clock clock, MotionEventUtils motionEventUtils) {
+   // The duration in milliseconds before a press turns into a long press,
+   // "x1.5" to ensure.
+  protected static final long DURATION_OF_LONG_PRESS
+      = (long) (ViewConfiguration.getLongPressTimeout() * 1.5f);
+
+   // The duration in milliseconds between the first tap's up event and second
+   // tap's down event for an interaction to be considered a double-tap.
+   // "/1.5" to ensure.
+  protected static final long DURATION_BETWEEN_DOUBLE_TAP
+      = (long) (ViewConfiguration.getDoubleTapTimeout() / 1.5f);
+
+  private static final long UNDEFINED_TIME = Long.MIN_VALUE;
+
+  private final Instrumentation instrumentation;
+  private final Clock clock;
+  private long downTime = UNDEFINED_TIME;
+  private Coordinates currentActiveCoordinates;
+
+  public AndroidNativeTouch(Clock clock, Instrumentation instrumentation) {
     this.clock = clock;
-    this.motionEventUtils = motionEventUtils;
+    this.instrumentation = instrumentation;
   }
 
   public static AndroidNativeTouch withDefaults(
       Instrumentation instrumentation) {
     Clock clock = new AndroidSystemClock();
-    MotionEventUtils motionEventUtils = new MotionEventUtils(instrumentation);
-    return new AndroidNativeTouch(clock, motionEventUtils);
+    return new AndroidNativeTouch(clock, instrumentation);
   }
 
   @Override
@@ -61,12 +77,18 @@ public class AndroidNativeTouch implements Touch {
     }
     updateActiveCoordinates(where);
     Point point = currentActiveCoordinates.getLocationOnScreen();
-    downTime = clock.now();
-    motionEventUtils.sendPointerSync(downTime, clock.now(),
-        MotionEvent.ACTION_DOWN, point.getX(), point.getY());
-    motionEventUtils.sendPointerSync(downTime, clock.now(),
-        MotionEvent.ACTION_UP, point.getX(), point.getY());
-    setTouchStateReleased();
+    tap(point.getX(), point.getY());
+  }
+
+  @Override
+  public void doubleTap(@Nullable Coordinates where) {
+    if (!isTouchStateReleased()) {
+      throw new IllegalStateException(
+          "Attempt to double tap when touch state is already down");
+    }
+    updateActiveCoordinates(where);
+    Point point = currentActiveCoordinates.getLocationOnScreen();
+    doubleTap(point.getX(), point.getY());
   }
 
   @Override
@@ -77,9 +99,7 @@ public class AndroidNativeTouch implements Touch {
     }
     updateActiveCoordinates(where);
     Point point = currentActiveCoordinates.getLocationOnScreen();
-    downTime = clock.now();
-    motionEventUtils.sendPointerSync(downTime, clock.now(),
-        MotionEvent.ACTION_DOWN, point.getX(), point.getY());
+    touchDown(point.getX(), point.getY());
   }
 
   @Override
@@ -90,20 +110,101 @@ public class AndroidNativeTouch implements Touch {
     }
     updateActiveCoordinates(where);
     Point point = currentActiveCoordinates.getLocationOnScreen();
-    motionEventUtils.sendPointerSync(downTime, clock.now(),
-        MotionEvent.ACTION_UP, point.getX(), point.getY());
-    setTouchStateReleased();
+    touchUp(point.getX(), point.getY());
   }
 
   @Override
   public void touchMove(Coordinates where) {
     Preconditions.checkNotNull(where);
     updateActiveCoordinates(where);
-    if (downTime != UNDEFINED_TIME) {
+    if (!isTouchStateReleased()) {
       Point point = where.getLocationOnScreen();
-      motionEventUtils.sendPointerSync(downTime, clock.now(),
-          MotionEvent.ACTION_MOVE, point.getX(), point.getY());
+      touchMove(point.getX(), point.getY());
     }
+  }
+
+  @Override
+  public void touchMove(Coordinates where, long xOffset, long yOffset) {
+    // Even Mouse.mouseMove(Coordinates where, long xOffset, long yOffset) is
+    // not supported yet in current WebDriver implementation.
+    throw new UnsupportedOperationException(
+        "Moving to arbitrary (x, y) coordinates not supported.");
+  }
+
+  @Override
+  public void longClick(Coordinates where) {
+    if (!isTouchStateReleased()) {
+      throw new IllegalStateException(
+          "Attempt to longclick when touch state is already down");
+    }
+    updateActiveCoordinates(where);
+    Point point = currentActiveCoordinates.getLocationOnScreen();
+    longClick(point.getX(), point.getY());
+  }
+
+  protected void touchDown(int x, int y) {
+    downTime = clock.now();
+    MotionEvent motionEvent = MotionEvent.obtain(downTime, clock.now(),
+        MotionEvent.ACTION_DOWN, x, y, DEFAULT_META_STATE);
+    sendMotionEvent(motionEvent);
+  }
+
+  protected void touchUp(int x, int y) {
+    MotionEvent motionEvent = MotionEvent.obtain(downTime, clock.now(),
+        MotionEvent.ACTION_UP, x, y, DEFAULT_META_STATE);
+    sendMotionEvent(motionEvent);
+    setTouchStateReleased();
+  }
+
+  protected void touchMove(int x, int y) {
+    MotionEvent motionEvent = MotionEvent.obtain(downTime, clock.now(),
+        MotionEvent.ACTION_MOVE, x, y, DEFAULT_META_STATE);
+    sendMotionEvent(motionEvent);
+  }
+
+  protected void tap(int x, int y) {
+    touchDown(x, y);
+    int scaledTouchSlopAdjustment = getScaledTouchSlopAdjustment();
+    touchMove(x + scaledTouchSlopAdjustment, y + scaledTouchSlopAdjustment);
+    touchUp(x, y);
+  }
+
+  protected void longClick(int x, int y) {
+    touchDown(x, y);
+    int scaledTouchSlopAdjustment = getScaledTouchSlopAdjustment();
+    touchMove(x + scaledTouchSlopAdjustment, y + scaledTouchSlopAdjustment);
+    sleep(DURATION_OF_LONG_PRESS);
+    touchUp(x, y);
+  }
+
+  protected void doubleTap(int x, int y) {
+    tap(x, y);
+    sleep(DURATION_BETWEEN_DOUBLE_TAP);
+    tap(x, y);
+  }
+
+  protected void sleep(long millis) {
+    try {
+      Thread.sleep(millis);
+    } catch (InterruptedException exception) {
+      Thread.currentThread().interrupt();
+      throw new WebDriverException(exception);
+    }
+  }
+
+  protected void sendMotionEvent(MotionEvent motionEvent) {
+    instrumentation.waitForIdleSync();
+    instrumentation.sendPointerSync(motionEvent);
+  }
+
+  protected boolean isTouchStateReleased() {
+    return downTime == UNDEFINED_TIME;
+  }
+
+  protected int getScaledTouchSlopAdjustment() {
+    int touchSlop = ViewConfiguration.get(instrumentation.getContext())
+        .getScaledTouchSlop();
+    return touchSlop / 2;
   }
 
   private void updateActiveCoordinates(Coordinates coordinates) {
@@ -119,7 +220,5 @@ public class AndroidNativeTouch implements Touch {
     downTime = UNDEFINED_TIME;
   }
 
-  private boolean isTouchStateReleased() {
-    return downTime == UNDEFINED_TIME;
-  }
+  //TODO(dxu): think about how to deal with ACTION_CANCEL
 }

@@ -37,9 +37,14 @@ import java.util.Map;
  * @author Dezheng Xu
  */
 public class TouchMove extends WebDriverHandler implements JsonParametersAware {
+  private static final String XOFFSET = "xoffset";
+  private static final String YOFFSET = "yoffset";
   private static final String ELEMENT = "element";
   private String elementId;
   private boolean elementProvided = false;
+  private int xOffset = 0;
+  private int yOffset = 0;
+  private boolean offsetsProvided = false;
 
   public TouchMove(DriverSessions sessions) {
     super(sessions);
@@ -47,14 +52,26 @@ public class TouchMove extends WebDriverHandler implements JsonParametersAware {
 
   @Override
   public ResultType call() throws Exception {
+    Touch touch = ((HasTouchScreen) getDriver()).getTouch();
+
     Coordinates elementLocation = null;
     if (elementProvided) {
       WebElement element = getKnownElements().get(elementId);
       elementLocation = ((Locatable) element).getCoordinates();
     }
-    Touch touch = ((HasTouchScreen) getDriver()).getTouch();
-    touch.touchMove(elementLocation);
+
+    if (offsetsProvided) {
+      touch.touchMove(elementLocation, xOffset, yOffset);
+    } else {
+      touch.touchMove(elementLocation);
+    }
+
     return ResultType.SUCCESS;
+  }
+
+  @Override
+  public String toString() {
+    return String.format("[touchmove: %s %b]", elementId, offsetsProvided);
   }
 
   @Override
@@ -66,6 +83,14 @@ public class TouchMove extends WebDriverHandler implements JsonParametersAware {
     } else {
       elementProvided = false;
     }
+
+    if (allParameters.containsKey(XOFFSET)
+        && allParameters.containsKey(YOFFSET)) {
+      xOffset = ((Long) allParameters.get(XOFFSET)).intValue();
+      yOffset = ((Long) allParameters.get(YOFFSET)).intValue();
+      offsetsProvided = true;
+    } else {
+      offsetsProvided = false;
+    }
   }
 }
-
