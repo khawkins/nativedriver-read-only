@@ -110,14 +110,19 @@ public class FindByTextTest extends TestCase {
   public void testFindByPartialText_multipleResultsFromSpinnerPopup() {
     startSpinnersActivity();
     driver.findElement(By.id("planet_spinner")).click();
-    driver.findElement(AndroidNativeBy.text("Venus"));
+
+    // Ensure the new UI is focused by performing a UI operation
+    driver.findElement(AndroidNativeBy.text("Choose a planet"))
+        .sendKeys(AndroidKeys.DPAD_DOWN, AndroidKeys.DPAD_UP);
 
     List<AndroidNativeElement> elementsWithArInText
         = driver.findAndroidNativeElements(AndroidNativeBy.partialText("ar"));
 
+    // Note that the word "Stars" in the main activity window also has 'ar' in
+    // its name, but this window is out of focus so it should be omitted from
+    // the search results.
     assertEquals(
-        "Should have found two planets with 'ar' in name: Earth and Mars, "
-        + "plus the 'Star:' TextView in the main window.",
-        3, elementsWithArInText.size());
+        "Should have found two planets with 'ar' in name: Earth and Mars.",
+        2, elementsWithArInText.size());
   }
 }

@@ -102,6 +102,20 @@ public abstract class AndroidNativeElement
   }
 
   /**
+   * Indicates whether this element should be omitted from find results. This
+   * is important if the element matches the find criteria (such as ID or text)
+   * but for some reason is not useful as a find result.
+   *
+   * <p>This default implementation always returns {@code false}.
+   *
+   * @return {@code true} if this element should be omitted from search results,
+   *         {@code false} otherwise
+   */
+  public boolean shouldOmitFromFindResults() {
+    return false;
+  }
+
+  /**
    * {@inheritDoc}
    *
    * This default implementation is a no-op.

@@ -18,11 +18,11 @@ limitations under the License.
 package com.google.android.testing.nativedriver.server;
 
 import com.google.android.testing.nativedriver.common.FindsByText;
+
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 import org.openqa.selenium.By;
@@ -83,17 +83,20 @@ import javax.annotation.Nullable;
 public class ElementFinder {
   private final RClassReader rClassReader;
   private final AndroidWait wait;
+  private static enum IdType {LITERAL, ANDROID}
 
   private static interface FilterCondition
       extends Predicate<AndroidNativeElement> {
     String notFoundExceptionMessage();
   }
 
-  private static class ByAndroidIdPredicate
-      implements Predicate<AndroidNativeElement> {
+  private static class ByAndroidIdFilterCondition implements FilterCondition {
+    private final String stringAndroidId;
     private final Integer androidId;
 
-    public ByAndroidIdPredicate(Integer androidId) {
+    public ByAndroidIdFilterCondition(
+        String stringAndroidId, Integer androidId) {
+      this.stringAndroidId = stringAndroidId;
       this.androidId = androidId;
     }
 
@@ -101,19 +104,31 @@ public class ElementFinder {
     public boolean apply(AndroidNativeElement input) {
       return androidId.equals(input.getAndroidId());
     }
+
+    @Override
+    public String notFoundExceptionMessage() {
+      return String.format(
+          "Could not find element with Android ID %d (string ID is '%s')",
+          androidId, stringAndroidId);
+    }
   }
 
-  private static class ByLiteralIdPredicate
-      implements Predicate<AndroidNativeElement> {
+  private static class ByLiteralIdFilterCondition implements FilterCondition {
     private final String literalId;
 
-    public ByLiteralIdPredicate(String literalId) {
+    public ByLiteralIdFilterCondition(String literalId) {
       this.literalId = literalId;
     }
 
     @Override
     public boolean apply(AndroidNativeElement input) {
       return literalId.equals(input.getLiteralId());
+    }
+
+    @Override
+    public String notFoundExceptionMessage() {
+      return String.format(
+          "Could not find element with literal ID '%s'", literalId);
     }
   }
 
@@ -187,11 +202,7 @@ public class ElementFinder {
           @Override
           public List<WebElement> apply(Void input) {
             List<WebElement> found = by.findElements(SearchContextImpl.this);
-            if (found.isEmpty()) {
-              return null;
-            } else {
-              return found;
-            }
+            return found.isEmpty() ? null : found;
           }
         });
       } catch (TimeoutException exception) {
@@ -199,35 +210,48 @@ public class ElementFinder {
       }
     }
 
-    @Override
-    public WebElement findElementById(String using) {
-      if (isLiteralId(using)) {
-        List<WebElement> result = findElementsById(using);
+    private WebElement findElementByAndroidId(String using) {
+      Integer androidId = parseAsAndroidId(using);
 
-        if (!result.isEmpty()) {
-          return result.get(0);
-        }
-      } else {
-        Integer androidId = parseAsAndroidId(using);
-
-        if (androidId != null) {
-          WebElement result = scope.findElementByAndroidId(androidId);
-
-          if (scope.equals(result)) {
-            // The search returned the root element, but the root is not
-            // included in the search according to the WebDriver's SearchContext
-            // API. So delegate to the plural method finder, which only searches
-            // children.
-            result = Iterables.getFirst(findElementsById(using), null);
-          }
-
-          if (result != null) {
-            return result;
-          }
-        }
+      if (androidId == null) {
+        throw new NoSuchElementException(
+            "The given ID could not be resolved to an Android integral ID: "
+            + using);
       }
 
-      throw new NoSuchElementException("Cannot find element with ID: " + using);
+      // 'using' is a simple integral Android ID, which means we may be
+      // able to find the element using the Android API calls.
+      AndroidNativeElement result = scope.findElementByAndroidId(androidId);
+
+      if (result == null) {
+        throw new NoSuchElementException(String.format(
+            "Cannot find element with Android ID: %d (original ID is '%s')",
+            androidId, using));
+      } else if (!scope.equals(result) && !result.shouldOmitFromFindResults()) {
+        return result;
+      } else {
+        // If we got here, one of the following is true:
+        // - The element is being omitted from the search results for
+        // whatever reason.
+        // - The search returned the root element, but the root is not
+        // included in the search according to the WebDriver's SearchContext
+        // API.
+
+        // So delegate to the plural method finder, which only searches
+        // children, and filters 'omitted' elements itself.
+        return findElementFromHierarchy(scope.getChildren(),
+            new ByAndroidIdFilterCondition(using, androidId));
+      }
+    }
+
+    @Override
+    public WebElement findElementById(String using) {
+      if (idType(using) == IdType.ANDROID) {
+        return findElementByAndroidId(using);
+      } else {
+        return findElementFromHierarchy(
+            scope.getChildren(), new ByLiteralIdFilterCondition(using));
+      }
     }
 
     @Override
@@ -235,8 +259,8 @@ public class ElementFinder {
       Preconditions.checkNotNull(using);
       Predicate<AndroidNativeElement> filter;
 
-      if (isLiteralId(using)) {
-        filter = new ByLiteralIdPredicate(using);
+      if (idType(using) == IdType.LITERAL) {
+        filter = new ByLiteralIdFilterCondition(using);
       } else {
         Integer androidId = parseAsAndroidId(using);
 
@@ -244,7 +268,7 @@ public class ElementFinder {
           return ImmutableList.of();
         }
 
-        filter = new ByAndroidIdPredicate(androidId);
+        filter = new ByAndroidIdFilterCondition(using, androidId);
       }
 
       return addElementsFromHierarchy(Lists.<WebElement>newArrayList(),
@@ -299,8 +323,8 @@ public class ElementFinder {
     return new SearchContextImpl(scope);
   }
 
-  private static boolean isLiteralId(String id) {
-    return id.startsWith("$");
+  private static IdType idType(String id) {
+    return id.startsWith("$") ? IdType.LITERAL : IdType.ANDROID;
   }
 
   private static WebElement findElementFromHierarchy(
@@ -326,7 +350,7 @@ public class ElementFinder {
         break;
       }
 
-      if (filter.apply(element)) {
+      if (filter.apply(element) && !element.shouldOmitFromFindResults()) {
         destination.add(element);
       }
 

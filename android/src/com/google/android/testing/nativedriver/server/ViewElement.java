@@ -154,6 +154,19 @@ public class ViewElement<V extends View>
     return (viewId == View.NO_ID) ? null : viewId;
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * This implementation returns {@code true} iff the wrapped {@code View} does
+   * not have window focus.
+   *
+   * @see View#hasWindowFocus()
+   */
+  @Override
+  public boolean shouldOmitFromFindResults() {
+    return !view.hasWindowFocus();
+  }
+
   @Override
   public void click() {
     // View.isClickable() check is not needed since the actual View which
