@@ -128,6 +128,31 @@ public class AdbConnection {
   }
 
   /**
+   * Sends key events to the Android device/emulator. This is equivalent to
+   * running {@code adb shell input keyevent (KEYCODE)} on the command line.
+   *
+   * @param keyCode to send to device/emulator.
+   * @see <a href="http://developer.android.com/reference/android/view/KeyEvent
+   * .html#KEYCODE_0">KEYCODE_ constants</a>
+   */
+  public void sendKeyEvent(int keyCode) {
+    Process adbProcess = runAdb(
+        "shell", "input", "keyevent", String.valueOf(keyCode));
+    confirmExitValueIs(0, adbProcess);
+  }
+
+  /**
+   * Sends text to the Android device/emulator. This is equivalent to
+   * running {@code adb shell input text (TEXT)} on the command line.
+   *
+   * @param text to send to the device/emulator
+   */
+  public void sendText(String text) {
+    Process adbProcess = runAdb("shell", "input", "text", text);
+    confirmExitValueIs(0, adbProcess);
+  }
+
+  /**
    * Runs {@code adb} using the given arguments and under the configuration
    * values passed to the constructor.
    *

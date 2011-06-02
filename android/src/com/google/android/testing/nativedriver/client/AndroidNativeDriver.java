@@ -167,6 +167,11 @@ public class AndroidNativeDriver
         .build();
   }
 
+  @Nullable
+  public AdbConnection getAdbConnection() {
+    return adbConnection;
+  }
+
   /**
    * Start a new activity either in a new task or the current
    * task. This is done by calling {@code get()} with a coded
