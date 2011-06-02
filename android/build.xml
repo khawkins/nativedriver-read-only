@@ -28,6 +28,7 @@ limitations under the License.
 	   srcdir="${src.dir}"
 	   includes="${common.package}/**">
       <classpath>
+	<pathelement path="${third_party.guava}" />
 	<pathelement path="${third_party.selenium.server}" />
         <pathelement path="${third_party.jsr305}" />
       </classpath>
@@ -38,6 +39,7 @@ limitations under the License.
 	   srcdir="${src.dir}"
 	   includes="${client.package}/**">
       <classpath>
+	<pathelement path="${third_party.guava}" />
 	<pathelement path="${third_party.selenium.server}" />
         <pathelement path="${third_party.jsr305}" />
       </classpath>
@@ -54,6 +56,7 @@ limitations under the License.
 	   srcdir="${src.dir}"
 	   includes="${server.package}/**">
       <classpath>
+	<pathelement path="${third_party.guava}" />
 	<pathelement path="${third_party.selenium.server}" />
         <pathelement path="${third_party.jsr305}" />
 	<pathelement path="${third_party.jetty}" />
@@ -86,8 +89,12 @@ limitations under the License.
 		  excludesfile="${server.resourcestoexclude}" />
       <zipfileset src="${build.dir}/common.jar"
 		  excludesfile="${server.resourcestoexclude}" />
-      <zipfileset src="${third_party.selenium.server}"
+      <zipfileset src="${third_party.guava}"
 		  excludesfile="${server.resourcestoexclude}" />
+      <zipfileset src="${third_party.selenium.server}">
+	<exclude name="${exclude_from_selenium}" />
+	<excludesfile name="${server.resourcestoexclude}" />
+      </zipfileset>
       <zipfileset src="${third_party.jsr305}"
 		  excludesfile="${server.resourcestoexclude}" />
       <zipfileset src="${third_party.jetty.core}"
@@ -112,10 +119,14 @@ limitations under the License.
 		  excludesfile="${client.resourcestoexclude}" />
       <zipfileset src="${build.dir}/common.jar"
   		  excludesfile="${client.resourcestoexclude}" />
-      <zipfileset src="${third_party.selenium.server}"
+      <zipfileset src="${third_party.guava}"
 		  excludesfile="${client.resourcestoexclude}" />
+      <zipfileset src="${third_party.selenium.server}">
+	<exclude name="${exclude_from_selenium}" />
+	<excludesfile name="${client.resourcestoexclude}" />
+      </zipfileset>
       <zipfileset src="${third_party.jsr305}"
-		  excludesfile="${server.resourcestoexclude}" />
+		  excludesfile="${client.resourcestoexclude}" />
     </zip>
   </target>
 
