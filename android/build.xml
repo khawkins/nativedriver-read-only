@@ -31,6 +31,7 @@ limitations under the License.
 	<pathelement path="${third_party.guava}" />
 	<pathelement path="${third_party.selenium.server}" />
         <pathelement path="${third_party.jsr305}" />
+        <pathelement path="${third_party.android}" />
       </classpath>
     </javac>
   </target>
