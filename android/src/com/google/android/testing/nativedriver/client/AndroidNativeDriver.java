@@ -18,14 +18,17 @@ limitations under the License.
 package com.google.android.testing.nativedriver.client;
 
 import com.google.android.testing.nativedriver.common.AndroidCapabilities;
+import com.google.android.testing.nativedriver.common.AndroidNativeDriverCommand;
 import com.google.android.testing.nativedriver.common.FindsByText;
-
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Closeables;
 
 import org.openqa.selenium.By;
+import org.openqa.selenium.HasInputDevices;
+import org.openqa.selenium.Keyboard;
+import org.openqa.selenium.Keys;
 import org.openqa.selenium.OutputType;
 import org.openqa.selenium.Rotatable;
 import org.openqa.selenium.ScreenOrientation;
@@ -58,9 +61,31 @@ import javax.imageio.ImageIO;
  * @author Tomohiro Kaizu
  */
 public class AndroidNativeDriver
-    extends RemoteWebDriver implements FindsByText, Rotatable, TakesScreenshot {
+    extends RemoteWebDriver implements FindsByText, Rotatable, HasInputDevices,
+    TakesScreenshot {
+  private class AndroidKeyboard implements Keyboard {
+    @Override
+    public void sendKeys(CharSequence... keysToSend) {
+      execute(AndroidNativeDriverCommand.SEND_KEYS_TO_SESSION,
+          ImmutableMap.of("value", keysToSend));
+    }
+
+    @Override
+    public void pressKey(Keys keyToPress) {
+      execute(AndroidNativeDriverCommand.SEND_MODIFIER_KEY_TO_SESSION,
+          ImmutableMap.of("value", keyToPress, "isdown", true));
+    }
+
+    @Override
+    public void releaseKey(Keys keyToRelease) {
+      execute(AndroidNativeDriverCommand.SEND_MODIFIER_KEY_TO_SESSION,
+          ImmutableMap.of("value", keyToRelease, "isdown", false));
+    }
+  }
+
   @Nullable
   private final AdbConnection adbConnection;
+  private final AndroidKeyboard androidKeyboard = new AndroidKeyboard();
 
   /**
    * A {@code Navigation} class for native Android applications. Provides
@@ -170,6 +195,11 @@ public class AndroidNativeDriver
   @Nullable
   public AdbConnection getAdbConnection() {
     return adbConnection;
+  }
+
+  @Override
+  public Keyboard getKeyboard() {
+    return androidKeyboard;
   }
 
   /**

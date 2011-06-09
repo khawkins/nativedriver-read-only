@@ -18,13 +18,16 @@ limitations under the License.
 package com.google.android.testing.nativedriver.server;
 
 import com.google.android.testing.nativedriver.common.AndroidKeys;
+
+import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
 
 import android.app.Instrumentation;
 import android.view.KeyEvent;
 
-import java.util.Map;
+import org.openqa.selenium.Keyboard;
+import org.openqa.selenium.Keys;
+import org.openqa.selenium.WebDriverException;
 
 /**
  * Provides a method to send a string to an application under test. Keys are
@@ -40,51 +43,81 @@ import java.util.Map;
  * @author Matt DeVore
  */
 public class KeySender {
-  /**
-   * A map of character codes in the Unicode Private Use Area to the
-   * corresponding Android key code.
-   */
-  private static final Map<Character, Integer> SPECIAL_KEYS;
-
-  private final Instrumentation instrumentation;
-
-  static {
-    SPECIAL_KEYS = ImmutableMap.<Character, Integer>builder()
-        .put(AndroidKeys.DPAD_DOWN.getKeyCode(), KeyEvent.KEYCODE_DPAD_DOWN)
-        .put(AndroidKeys.DPAD_LEFT.getKeyCode(), KeyEvent.KEYCODE_DPAD_LEFT)
-        .put(AndroidKeys.DPAD_RIGHT.getKeyCode(), KeyEvent.KEYCODE_DPAD_RIGHT)
-        .put(AndroidKeys.DPAD_UP.getKeyCode(), KeyEvent.KEYCODE_DPAD_UP)
-        .put(AndroidKeys.BACK.getKeyCode(), KeyEvent.KEYCODE_BACK)
-        .put(AndroidKeys.DEL.getKeyCode(), KeyEvent.KEYCODE_DEL)
-        .put(AndroidKeys.ENTER.getKeyCode(), KeyEvent.KEYCODE_ENTER)
-        .put(AndroidKeys.HOME.getKeyCode(), KeyEvent.KEYCODE_HOME)
-        .put(AndroidKeys.MENU.getKeyCode(), KeyEvent.KEYCODE_MENU)
-        .put(AndroidKeys.SEARCH.getKeyCode(), KeyEvent.KEYCODE_SEARCH)
-        .build();
+  private class KeyboardImpl implements Keyboard {
+    @Override
+    public void pressKey(Keys keyToPress){
+      sendKeyEvent(KeyEvent.ACTION_DOWN, keyToPress.charAt(0));
+    }
+    
+    @Override
+    public void releaseKey(Keys keyToRelease){
+      sendKeyEvent(KeyEvent.ACTION_UP, keyToRelease.charAt(0));
+    }
+    
+    @Override
+    public void sendKeys(CharSequence... keysToSend) {
+      send(Joiner.on("").join(keysToSend));
+    }
   }
 
+  private final Instrumentation instrumentation;
+  private final KeyboardImpl keyboardImpl;
+  
   /**
    * Creates a new instance which sends keys to the given
    * {@code Instrumentation}.
    */
   public KeySender(Instrumentation instrumentation) {
     this.instrumentation = Preconditions.checkNotNull(instrumentation);
+    this.keyboardImpl = new KeyboardImpl();
   }
-
-  private static boolean isSpecialKey(char character) {
-    return SPECIAL_KEYS.keySet().contains(character);
+  
+  /**
+   * Returns a {@code Keyboard} object which sends key using this
+   * {@code KeySender}.
+   */
+  public Keyboard getKeyboard() {
+    return keyboardImpl;
   }
-
+  
   private static int indexOfSpecialKey(CharSequence string, int startIndex) {
     for (int i = startIndex; i < string.length(); i++) {
-      if (isSpecialKey(string.charAt(i))) {
+      if (AndroidKeys.hasAndroidKeyEvent(string.charAt(i))) {
         return i;
       }
     }
-
     return string.length();
   }
 
+  /**
+   * Sends a single key event to the {@code Instrumentation} for a given 
+   * character.
+   * 
+   * @param action {@code KeyEvent.ACTION_*} code representing key action
+   * @param keyCode character representing key to press, release, etc.
+   */
+  public void sendKeyEvent(int action, char keyCode) {
+    instrumentation.waitForIdleSync();
+    try {
+      instrumentation.sendKeySync(
+          new KeyEvent(action, AndroidKeys.keyCodeFor(keyCode)));
+    } catch (SecurityException exception) {
+      throw new WebDriverException(exception);
+    }
+  }
+  
+  /**
+   * A convenience wrapper for {@link #sendKeyEvent(int, char)} which takes an
+   * {@code AndroidKeys} object.
+   * 
+   * @param action {@code KeyEvent.ACTION_*} code representing key action
+   * @param key {@code AndroidKeys} object representing key to press, release, 
+   * etc.
+   */
+  public void sendKeyEvent(int action, AndroidKeys key) {
+    this.sendKeyEvent(action, key.charAt(0));
+  }
+  
   /**
    * Sends key events to the {@code Instrumentation}. This method will send
    * a portion of the given {@code CharSequence} as a single {@code String} if
@@ -94,14 +127,15 @@ public class KeySender {
    */
   public void send(CharSequence string) {
     int currentIndex = 0;
-
+    
     instrumentation.waitForIdleSync();
-
+    
     while (currentIndex < string.length()) {
       char currentCharacter = string.charAt(currentIndex);
-      if (isSpecialKey(currentCharacter)) {
+      if (AndroidKeys.hasAndroidKeyEvent(currentCharacter)) {
         // The next character is special and must be sent individually
-        instrumentation.sendKeyDownUpSync(SPECIAL_KEYS.get(currentCharacter));
+        instrumentation.sendKeyDownUpSync(
+            AndroidKeys.keyCodeFor(currentCharacter));
         currentIndex++;
       } else {
         // There is at least one "normal" character, that is a character

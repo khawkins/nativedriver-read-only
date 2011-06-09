@@ -32,8 +32,12 @@ import android.view.Surface;
 
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
+import org.openqa.selenium.ActionChainsGenerator;
 import org.openqa.selenium.By;
 import org.openqa.selenium.Cookie;
+import org.openqa.selenium.HasInputDevices;
+import org.openqa.selenium.Keyboard;
+import org.openqa.selenium.Mouse;
 import org.openqa.selenium.Rotatable;
 import org.openqa.selenium.ScreenOrientation;
 import org.openqa.selenium.SearchContext;
@@ -49,6 +53,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import javax.annotation.Nullable;
+
 /**
  * Represents an Android NativeDriver for driving native Android
  * applications.
@@ -58,7 +64,7 @@ import java.util.concurrent.TimeUnit;
  * @author Dezheng Xu
  */
 public class AndroidNativeDriver
-    implements WebDriver, Rotatable, HasTouchScreen {
+    implements WebDriver, Rotatable, HasTouchScreen, HasInputDevices {
   private final ElementContext context;
   private SearchContext rootSearchContext;
 
@@ -177,7 +183,6 @@ public class AndroidNativeDriver
 
   public AndroidNativeDriver(ElementContext context) {
     this.context = context;
-
     // We have to do this in the constructor because the RemoteWebDriver
     // framework expects the browser (test environment) to be in a clean state
     // after driver construction. If this behavior is a problem for your
@@ -418,5 +423,22 @@ public class AndroidNativeDriver
           "Current focused activity does not exist.");
     }
     return activity;
+  }
+
+  @Override
+  public Keyboard getKeyboard() {
+    return context.getKeySender().getKeyboard();
+  }
+
+  @Override
+  @Nullable
+  public Mouse getMouse() {
+    return null;
+  }
+
+  @Override
+  @Nullable
+  public ActionChainsGenerator actionsBuilder() {
+    return null;
   }
 }

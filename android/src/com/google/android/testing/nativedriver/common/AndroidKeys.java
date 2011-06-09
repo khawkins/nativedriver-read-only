@@ -17,7 +17,10 @@ limitations under the License.
 
 package com.google.android.testing.nativedriver.common;
 
+import android.view.KeyEvent;
+
 import org.openqa.selenium.Keys;
+import org.openqa.selenium.WebDriverException;
 
 /**
  * Contains keys that can be sent to Android Native driver implementations of
@@ -34,31 +37,85 @@ import org.openqa.selenium.Keys;
  */
 public enum AndroidKeys implements CharSequence {
   // Keys that are shared with normal WebDriver (sorted alphabetically)
-  DEL(Keys.DELETE),
-  DPAD_DOWN(Keys.ARROW_DOWN),
-  DPAD_LEFT(Keys.ARROW_LEFT),
-  DPAD_RIGHT(Keys.ARROW_RIGHT),
-  DPAD_UP(Keys.ARROW_UP),
-  ENTER(Keys.ENTER),
+  ALT_LEFT(Keys.ALT, KeyEvent.KEYCODE_ALT_LEFT),
+  DEL(Keys.DELETE, KeyEvent.KEYCODE_DEL),
+  DPAD_DOWN(Keys.ARROW_DOWN, KeyEvent.KEYCODE_DPAD_DOWN),
+  DPAD_LEFT(Keys.ARROW_LEFT, KeyEvent.KEYCODE_DPAD_LEFT),
+  DPAD_RIGHT(Keys.ARROW_RIGHT, KeyEvent.KEYCODE_DPAD_RIGHT),
+  DPAD_UP(Keys.ARROW_UP, KeyEvent.KEYCODE_DPAD_UP),
+  ENTER(Keys.ENTER, KeyEvent.KEYCODE_ENTER),
+  SHIFT_LEFT(Keys.SHIFT, KeyEvent.KEYCODE_SHIFT_LEFT),
 
   // Keys only for native Android apps (sorted by key code)
-  BACK('\uE100'),
-  HOME('\uE101'),
-  MENU('\uE102'),
-  SEARCH('\uE103');
+  BACK('\uE100', KeyEvent.KEYCODE_BACK),
+  HOME('\uE101', KeyEvent.KEYCODE_HOME),
+  MENU('\uE102', KeyEvent.KEYCODE_MENU),
+  SEARCH('\uE103', KeyEvent.KEYCODE_SEARCH),
+  SYM('\uE104', KeyEvent.KEYCODE_SYM),
+  ALT_RIGHT('\uE105', KeyEvent.KEYCODE_ALT_RIGHT),
+  SHIFT_RIGHT('\uE106', KeyEvent.KEYCODE_SHIFT_RIGHT);
 
   private final char keyCode;
+  private final int androidKeyCode;
 
-  private AndroidKeys(char keyCode) {
+  private AndroidKeys(char keyCode, int androidKeyCode) {
     this.keyCode = keyCode;
+    this.androidKeyCode = androidKeyCode;
   }
 
-  private AndroidKeys(Keys key) {
-    keyCode = key.charAt(0);
+  private AndroidKeys(Keys key, int androidKeyCode) {
+    this.keyCode = key.charAt(0);
+    this.androidKeyCode = androidKeyCode;
   }
 
-  public char getKeyCode() {
-    return keyCode;
+  /**
+   * Returns a character's corresponding Android {@code KeyEvent} code.
+   *
+   * @param keyCode character to get {@code KeyEvent} code for
+   * @return integer representing {@code KeyEvent} code
+   */
+  public static int keyCodeFor(char keyCode) throws WebDriverException {
+    // see whether char is a special key; if so, return that
+    for (AndroidKeys key : AndroidKeys.values()) {
+      if (key.charAt(0) == keyCode) {
+        return key.getAndroidKeyCode();
+      }
+    }
+
+    // otherwise, figure out corresponding KeyEvent integer
+    char upperCaseKey = Character.toUpperCase(keyCode);
+    if (Character.isDigit(upperCaseKey)) {
+      return upperCaseKey - '0' + KeyEvent.KEYCODE_0;
+    }
+    if (Character.isLetter(upperCaseKey)) {
+      return upperCaseKey - 'A' + KeyEvent.KEYCODE_A;
+    }
+    throw new WebDriverException("Character '" + keyCode + "' is not yet "
+        + "supported by Android NativeDriver.");
+  }
+
+  /**
+   * Returns true if key character is defined within {@code AndroidKeys}.
+   *
+   * @param keyCode character to check
+   * @return true if key is present within {@code AndroidKeys}
+   */
+  public static boolean hasAndroidKeyEvent(char keyCode) {
+    for (AndroidKeys key : AndroidKeys.values()) {
+      if (key.charAt(0) == keyCode) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Returns key's corresponding Android {@code KeyEvent} code.
+   *
+   * @return Android {@code KeyEvent} code
+   */
+  public int getAndroidKeyCode() {
+    return androidKeyCode;
   }
 
   @Override

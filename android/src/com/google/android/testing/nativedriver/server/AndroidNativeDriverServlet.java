@@ -22,6 +22,7 @@ import com.google.android.testing.nativedriver.server.handler.AndroidNativeFindC
 import com.google.android.testing.nativedriver.server.handler.AndroidNativeFindChildElements;
 import com.google.android.testing.nativedriver.server.handler.AndroidNativeFindElement;
 import com.google.android.testing.nativedriver.server.handler.AndroidNativeFindElements;
+import com.google.android.testing.nativedriver.server.handler.AndroidNativeSendKeys;
 import com.google.android.testing.nativedriver.server.handler.Click;
 import com.google.android.testing.nativedriver.server.handler.DoubleTap;
 import com.google.android.testing.nativedriver.server.handler.TouchDown;
@@ -46,7 +47,7 @@ import javax.servlet.ServletException;
  * @author Matt DeVore
  */
 public class AndroidNativeDriverServlet extends DriverServlet {
-  protected final static String SESSION_PATH = "/session/:sessionId/";
+  protected static final String SESSION_PATH = "/session/:sessionId/";
 
   /**
    * Registers the AND WebDriver implementation with the Jetty server so AND
@@ -74,6 +75,10 @@ public class AndroidNativeDriverServlet extends DriverServlet {
       addNewPostMapping(SESSION_PATH + "element/:id/elements",
           AndroidNativeFindChildElements.class)
           .on(ResultType.SUCCESS, newJsonResult());
+
+      addNewPostMapping(SESSION_PATH + "element/:id/value",
+          AndroidNativeSendKeys.class)
+          .on(ResultType.SUCCESS, newEmptyResult());
 
       addNewPostMapping(SESSION_PATH + "click", Click.class)
           .on(ResultType.SUCCESS, newEmptyResult());
