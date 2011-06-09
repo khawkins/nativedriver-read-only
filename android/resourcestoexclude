@@ -13,6 +13,7 @@ license/**
 net/sourceforge/htmlunit/**
 opera/**
 org/cyberneko/**
+org/openqa/selenium/firefox/**
 sslSupport/**
 x86/**
 META-INF/MANIFEST.MF
