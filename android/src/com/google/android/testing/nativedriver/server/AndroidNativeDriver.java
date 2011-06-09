@@ -32,7 +32,6 @@ import android.view.Surface;
 
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
-import org.openqa.selenium.ActionChainsGenerator;
 import org.openqa.selenium.By;
 import org.openqa.selenium.Cookie;
 import org.openqa.selenium.HasInputDevices;
@@ -41,10 +40,11 @@ import org.openqa.selenium.Mouse;
 import org.openqa.selenium.Rotatable;
 import org.openqa.selenium.ScreenOrientation;
 import org.openqa.selenium.SearchContext;
-import org.openqa.selenium.Speed;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebDriverException;
 import org.openqa.selenium.WebElement;
+import org.openqa.selenium.interactions.ActionChainsGenerator;
+import org.openqa.selenium.interactions.DefaultActionChainsGenerator;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -106,18 +106,12 @@ public class AndroidNativeDriver
     }
 
     @Override
-    public Speed getSpeed() {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void setSpeed(Speed speed) {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
     public Timeouts timeouts() {
       return new AndroidNativeTimeouts();
+    }
+
+    public ImeHandler ime() {
+      throw new UnsupportedOperationException();
     }
   }
 
@@ -435,10 +429,12 @@ public class AndroidNativeDriver
   public Mouse getMouse() {
     return null;
   }
-
+  
+  /* (non-Javadoc)
+   * @see org.openqa.selenium.HasInputDevices#actionsBuilder()
+   */
   @Override
-  @Nullable
   public ActionChainsGenerator actionsBuilder() {
-    return null;
+    return new DefaultActionChainsGenerator(this);
   }
 }

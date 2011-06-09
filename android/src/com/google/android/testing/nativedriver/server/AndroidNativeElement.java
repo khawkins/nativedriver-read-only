@@ -265,12 +265,6 @@ public abstract class AndroidNativeElement
 
   @Deprecated
   @Override
-  public void hover() {
-    throw new UnsupportedOperationException();
-  }
-
-  @Deprecated
-  @Override
   public void dragAndDropBy(int moveRightBy, int moveDownBy) {
     throw new UnsupportedOperationException();
   }
