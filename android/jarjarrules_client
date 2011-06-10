@@ -19,6 +19,8 @@ keep com.google.common.collect.Multiset
 keep com.google.common.collect.Ranges
 keep com.google.common.collect.RegularImmutableList
 keep com.google.common.collect.RegularImmutableSet
+keep com.google.common.io.ByteStreams
+keep com.google.common.io.LittleEndianDataInputStream
 keep com.google.common.primitives.Ints
 keep javax.servlet.**
 keep org.mortbay.**
