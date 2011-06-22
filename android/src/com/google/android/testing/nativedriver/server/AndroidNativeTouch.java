@@ -55,8 +55,10 @@ public class AndroidNativeTouch implements Touch {
 
   private final Instrumentation instrumentation;
   private final Clock clock;
-  private long downTime = UNDEFINED_TIME;
   private Coordinates currentActiveCoordinates;
+
+  // We are only accessing downTime in synchronized blocks
+  private long downTime = UNDEFINED_TIME;
 
   public AndroidNativeTouch(Clock clock, Instrumentation instrumentation) {
     this.clock = clock;
@@ -70,7 +72,7 @@ public class AndroidNativeTouch implements Touch {
   }
 
   @Override
-  public void tap(@Nullable Coordinates where) {
+  public synchronized void tap(@Nullable Coordinates where) {
     if (!isTouchStateReleased()) {
       throw new IllegalStateException(
           "Attempt to tap when touch state is already down");
@@ -81,7 +83,7 @@ public class AndroidNativeTouch implements Touch {
   }
 
   @Override
-  public void doubleTap(@Nullable Coordinates where) {
+  public synchronized void doubleTap(@Nullable Coordinates where) {
     if (!isTouchStateReleased()) {
       throw new IllegalStateException(
           "Attempt to double tap when touch state is already down");
@@ -92,7 +94,7 @@ public class AndroidNativeTouch implements Touch {
   }
 
   @Override
-  public void touchDown(@Nullable Coordinates where) {
+  public synchronized void touchDown(@Nullable Coordinates where) {
     if (!isTouchStateReleased()) {
       throw new IllegalStateException(
           "Attempt to touch down when touch state is already down");
@@ -103,7 +105,7 @@ public class AndroidNativeTouch implements Touch {
   }
 
   @Override
-  public void touchUp(@Nullable Coordinates where) {
+  public synchronized void touchUp(@Nullable Coordinates where) {
     if (isTouchStateReleased()) {
       throw new IllegalStateException(
           "Attempt to release touch when touch is already released");
@@ -114,7 +116,7 @@ public class AndroidNativeTouch implements Touch {
   }
 
   @Override
-  public void touchMove(Coordinates where) {
+  public synchronized void touchMove(Coordinates where) {
     Preconditions.checkNotNull(where);
     updateActiveCoordinates(where);
     if (!isTouchStateReleased()) {
@@ -124,7 +126,8 @@ public class AndroidNativeTouch implements Touch {
   }
 
   @Override
-  public void touchMove(Coordinates where, long xOffset, long yOffset) {
+  public synchronized void touchMove(
+      Coordinates where, long xOffset, long yOffset) {
     // Even Mouse.mouseMove(Coordinates where, long xOffset, long yOffset) is
     // not supported yet in current WebDriver implementation.
     throw new UnsupportedOperationException(
@@ -132,7 +135,7 @@ public class AndroidNativeTouch implements Touch {
   }
 
   @Override
-  public void longClick(Coordinates where) {
+  public synchronized void longClick(Coordinates where) {
     if (!isTouchStateReleased()) {
       throw new IllegalStateException(
           "Attempt to longclick when touch state is already down");
@@ -152,8 +155,8 @@ public class AndroidNativeTouch implements Touch {
   protected void touchUp(int x, int y) {
     MotionEvent motionEvent = MotionEvent.obtain(downTime, clock.now(),
         MotionEvent.ACTION_UP, x, y, DEFAULT_META_STATE);
-    sendMotionEvent(motionEvent);
     setTouchStateReleased();
+    sendMotionEvent(motionEvent);
   }
 
   protected void touchMove(int x, int y) {
