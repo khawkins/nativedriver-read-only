@@ -54,6 +54,16 @@ public abstract class AndroidNativeElement
   }
 
   /**
+   * Checks if this element supports the given class. This is used to implement
+   * the {@link org.openqa.selenium.internal.FindsByClassName} interface.
+   *
+   * @param className the class name to check if supported by the element
+   * @return {@code true} iff this element supports the specified class
+   */
+  public abstract boolean supportsClass(String className);
+
+
+  /**
    * {@inheritDoc}
    *
    * <p>This implementation returns an empty {@code Iterable}.

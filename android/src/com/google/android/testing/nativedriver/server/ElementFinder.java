@@ -30,6 +30,7 @@ import org.openqa.selenium.NoSuchElementException;
 import org.openqa.selenium.SearchContext;
 import org.openqa.selenium.WebDriverException;
 import org.openqa.selenium.WebElement;
+import org.openqa.selenium.internal.FindsByClassName;
 import org.openqa.selenium.internal.FindsById;
 import org.openqa.selenium.support.ui.TimeoutException;
 
@@ -169,8 +170,28 @@ public class ElementFinder {
     }
   }
 
+  private static class ByClassNameFilterCondition implements FilterCondition {
+    private final String className;
+
+    public ByClassNameFilterCondition(String className) {
+      this.className = className;
+    }
+
+    @Override
+    public boolean apply(AndroidNativeElement input) {
+      return input.supportsClass(className);
+    }
+
+    @Override
+    public String notFoundExceptionMessage() {
+      return "Could not find element with class name: '" + className + "'. "
+          + "Be sure to use the class' full name (including package) and "
+          + "consider using one of the constants in client.ClassNames.";
+    }
+  }
+
   private class SearchContextImpl
-      implements SearchContext, FindsById, FindsByText {
+      implements SearchContext, FindsById, FindsByText, FindsByClassName {
     private final ElementSearchScope scope;
 
     private SearchContextImpl(ElementSearchScope scope) {
@@ -302,6 +323,20 @@ public class ElementFinder {
       Preconditions.checkNotNull(using);
       return addElementsFromHierarchy(Lists.<WebElement>newArrayList(),
           scope.getChildren(), new ByPartialTextFilterCondition(using),
+          Integer.MAX_VALUE /* maxResults */);
+    }
+
+    @Override
+    public WebElement findElementByClassName(String using) {
+      Preconditions.checkNotNull(using);
+      FilterCondition filter = new ByClassNameFilterCondition(using);
+      return findElementFromHierarchy(scope.getChildren(), filter);
+    }
+
+    @Override
+    public List<WebElement> findElementsByClassName(String using) {
+      return addElementsFromHierarchy(Lists.<WebElement>newArrayList(),
+          scope.getChildren(), new ByClassNameFilterCondition(using),
           Integer.MAX_VALUE /* maxResults */);
     }
   }

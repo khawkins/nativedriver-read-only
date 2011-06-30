@@ -128,6 +128,27 @@ public class ViewElement<V extends View>
   // AndroidNativeElement for context menus.
 
   /**
+   * {@inheritDoc}
+   *
+   * This implementation returns {@code true} iff the given class exists and the
+   * wrapped {@code View} is an instance of it. For instance, if
+   * {@code className} is {@code "android.widget.TextView"}, then this method
+   * will return {@code true} if the wrapped {@code View} is an instance of
+   * {@link android.widget.TextView} or {@link android.widget.Button}.
+   */
+  @Override
+  public boolean supportsClass(String className) {
+    Class<?> searchedForClass;
+    try {
+      searchedForClass = Class.forName(className);
+    } catch (ClassNotFoundException exception) {
+      return false;
+    }
+
+    return searchedForClass.isAssignableFrom(view.getClass());
+  }
+
+  /**
    * Returns the literal ID of the wrapped {@code View}, or {@code null} if it
    * does not have one. This implementation will only return non-null if this
    * {@code View} is the decor view of the currently-focused {@code Activity},
