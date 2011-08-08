@@ -413,7 +413,7 @@
 					NATIVEDRIVER,
 					DEBUG,
 				);
-				HEADER_SEARCH_PATHS = ../../NativeDriver/Classes;
+				HEADER_SEARCH_PATHS = ../Classes;
 				INFOPLIST_FILE = "Sample-Info.plist";
 				OTHER_LDFLAGS = (
 					"-ObjC",
@@ -432,7 +432,7 @@
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "Sample-Prefix.pch";
 				GCC_PREPROCESSOR_DEFINITIONS = NATIVEDRIVER;
-				HEADER_SEARCH_PATHS = ../../NativeDriver/Classes;
+				HEADER_SEARCH_PATHS = ../Classes;
 				INFOPLIST_FILE = "Sample-Info.plist";
 				OTHER_LDFLAGS = (
 					"-ObjC",
